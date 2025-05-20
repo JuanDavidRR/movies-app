@@ -46,7 +46,8 @@ export const getTrendingMovies = async (): Promise<TrendingMovie[] | undefined> 
       Query.orderDesc("count"),
     ]);
 
-    return result.documents as TrendingMovie[];
+    // Use type assertion but cast to unknown first as recommended by TypeScript
+    return result.documents as unknown as TrendingMovie[];
   } catch (error) {
     console.error(error);
     return undefined;
