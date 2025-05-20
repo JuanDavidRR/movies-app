@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import Search from "./components/Search.jsx";
-import Spinner from "./components/Spinner.jsx";
-import MovieCard from "./components/MovieCard.jsx";
+import Search from "./components/Search";
+import Spinner from "./components/Spinner";
+import MovieCard from "./components/MovieCard";
 import { useDebounce } from "react-use";
-import { getTrendingMovies, updateSearchCount } from "./appwrite.js";
-import type { TrendingMovie } from "./types.js";
+import { getTrendingMovies, updateSearchCount } from "./appwrite";
+import type { TrendingMovie, Movie } from "./types";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
 
@@ -22,7 +22,7 @@ const App = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const [movieList, setMovieList] = useState<TrendingMovie[]>([]);
+  const [movieList, setMovieList] = useState<Movie[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -57,10 +57,11 @@ const App = () => {
         return;
       }
 
-      setMovieList(data.results || []);
+      const moviesWithType: Movie[] = data.results || [];
+      setMovieList(moviesWithType);
 
       if (query && data.results.length > 0) {
-        await updateSearchCount(query, data.results[0]);
+        await updateSearchCount(query, data.results[0] as Movie);
       }
     } catch (error) {
       console.error(`Error fetching movies: ${error}`);
@@ -73,8 +74,9 @@ const App = () => {
   const loadTrendingMovies = async () => {
     try {
       const movies = await getTrendingMovies();
-
-      setTrendingMovies(movies);
+      if (movies) {
+        setTrendingMovies(movies);
+      }
     } catch (error) {
       console.error(`Error fetching trending movies: ${error}`);
     }

@@ -1,4 +1,5 @@
 import { Client, Databases, ID, Query } from "appwrite";
+import type { Movie, TrendingMovie } from "./types";
 
 const PROJECT_ID = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 const DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
@@ -10,7 +11,7 @@ const client = new Client()
 
 const database = new Databases(client);
 
-export const updateSearchCount = async (searchTerm, movie) => {
+export const updateSearchCount = async (searchTerm: string, movie: Movie): Promise<void> => {
   // 1. Use Appwrite SDK to check if the search term exists in the database
   try {
     const result = await database.listDocuments(DATABASE_ID, COLLECTION_ID, [
@@ -38,15 +39,16 @@ export const updateSearchCount = async (searchTerm, movie) => {
   }
 };
 
-export const getTrendingMovies = async () => {
+export const getTrendingMovies = async (): Promise<TrendingMovie[] | undefined> => {
   try {
     const result = await database.listDocuments(DATABASE_ID, COLLECTION_ID, [
       Query.limit(5),
       Query.orderDesc("count"),
     ]);
 
-    return result.documents;
+    return result.documents as TrendingMovie[];
   } catch (error) {
     console.error(error);
+    return undefined;
   }
 };
