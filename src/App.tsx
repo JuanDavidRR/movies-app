@@ -1,148 +1,66 @@
-import { useEffect, useState } from "react";
-import Search from "./components/Search";
-import Spinner from "./components/Spinner";
-import MovieCard from "./components/MovieCard";
-import { useDebounce } from "react-use";
-import { getTrendingMovies, updateSearchCount } from "./appwrite";
-import type { TrendingMovie, Movie } from "./types";
+// App.tsx - With Top Rated Movies Added
+import { gsap } from "gsap";
+import { SplitText } from "gsap/SplitText";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 
-const API_BASE_URL = "https://api.themoviedb.org/3";
+import Header from "./components/Header";
+import TrendingSection from "./components/TrendingSection";
+import MoviesSection from "./components/MoviesSection";
+import { useMovies } from "./hooks/useMovies";
+import { useTrendingMovies } from "./hooks/useTrendingMovies";
 
-const API_KEY = import.meta.env.VITE_IMDB_API_KEY;
-
-const API_OPTIONS = {
-  method: "GET",
-  headers: {
-    accept: "application/json",
-    Authorization: `Bearer ${API_KEY}`,
-  },
-};
+// Register the plugins once at the app level
+gsap.registerPlugin(SplitText, ScrollTrigger);
 
 const App = () => {
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
+  // Regular search/discover movies
+  const { searchTerm, setSearchTerm, movieList, errorMessage, isLoading } =
+    useMovies();
 
-  const [movieList, setMovieList] = useState<Movie[]>([]);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // Top rated movies
+  const {
+    movieList: topRatedMovies,
+    errorMessage: topRatedError,
+    isLoading: topRatedLoading,
+  } = useMovies(
+    "https://api.themoviedb.org/3/movie/top_rated?language=en-US&page=1"
+  );
 
-  const [trendingMovies, setTrendingMovies] = useState<TrendingMovie[]>([]);
-
-  // Debounce the search term to prevent making too many API requests
-  // by waiting for the user to stop typing for 500ms
-  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
-
-  const fetchMovies = async (query = "") => {
-    setIsLoading(true);
-    setErrorMessage("");
-
-    try {
-      const endpoint = query
-        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(
-            query
-          )}&sort_by=popularity.desc`
-        : `${API_BASE_URL}/discover/movie?sort_by=popularity.desc`;
-
-      const response = await fetch(endpoint, API_OPTIONS);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch movies");
-      }
-
-      const data = await response.json();
-
-      if (data.Response === "False") {
-        setErrorMessage(data.Error || "Failed to fetch movies");
-        setMovieList([]);
-        return;
-      }
-
-      const moviesWithType: Movie[] = data.results || [];
-      setMovieList(moviesWithType);
-
-      if (query && data.results.length > 0) {
-        await updateSearchCount(query, data.results[0] as Movie);
-      }
-    } catch (error) {
-      console.error(`Error fetching movies: ${error}`);
-      setErrorMessage("Error fetching movies. Please try again later.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadTrendingMovies = async () => {
-    try {
-      const movies = await getTrendingMovies();
-      if (movies) {
-        setTrendingMovies(movies);
-      }
-    } catch (error) {
-      console.error(`Error fetching trending movies: ${error}`);
-    }
-  };
-
-  useEffect(() => {
-    fetchMovies(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
-
-  useEffect(() => {
-    loadTrendingMovies();
-  }, []);
+  const { trendingMovies } = useTrendingMovies();
 
   return (
-    <main>
-      <div className="pattern" />
+    <main role="main">
+      <a
+        href="#all-movies"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:right-0 focus:mx-auto focus:w-max focus:px-4 focus:py-2 focus:bg-black focus:text-white focus:font-bold focus:z-50 focus:rounded-b-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-label="Skip to movie content"
+      >
+        Skip to Movies
+      </a>
+
+      <div className="pattern" aria-hidden="true" />
 
       <div className="wrapper">
-        <header>
-          <img src="./hero.png" alt="Hero Banner" />
-          <h1>
-            Find <span className="text-gradient">Movies</span> You'll Enjoy
-            Without the Hassle
-          </h1>
+        <Header searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-          <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-        </header>
+        <TrendingSection trendingMovies={trendingMovies} />
 
-        {trendingMovies.length > 0 && (
-          <section className="trending">
-            <h2>Based on your searches</h2>
+        {/* Top Rated Movies Section */}
+        <MoviesSection
+          title="Top Rated Movies"
+          movieList={topRatedMovies}
+          isLoading={topRatedLoading}
+          errorMessage={topRatedError}
+          limit={10}
+        />
 
-            <ul>
-              {trendingMovies.map((movie, index) => (
-                <li key={movie.$id}>
-                  <p>{index + 1}</p>
-                  <img
-                    src={
-                      movie.poster_url === "https://image.tmdb.org/t/p/w500null"
-                        ? "no-movie.png"
-                        : movie.poster_url
-                    }
-                    alt={movie.title}
-                  />{" "}
-                  {/* <h3>{movie.searchTerm}</h3> */}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <section className="all-movies">
-          <h2>Latest Movies</h2>
-
-          {isLoading ? (
-            <Spinner />
-          ) : errorMessage ? (
-            <p className="text-red-500">{errorMessage}</p>
-          ) : (
-            <ul>
-              {movieList.map((movie) => (
-                <MovieCard key={movie.id} movie={movie} />
-              ))}
-            </ul>
-          )}
-        </section>
+        {/* Regular Movies Section */}
+        <MoviesSection
+          title="Latest Movies"
+          movieList={movieList}
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+        />
       </div>
     </main>
   );

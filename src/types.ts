@@ -16,6 +16,6 @@ export type DocumentMovie = {
 export type TrendingMovie = {
   $id: string;
   poster_url: string;
-  title: string;
+  movie_title: string;
   searchTerm: string;
 };

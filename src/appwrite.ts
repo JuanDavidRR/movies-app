@@ -31,6 +31,7 @@ export const updateSearchCount = async (searchTerm: string, movie: Movie): Promi
         searchTerm,
         count: 1,
         movie_id: movie.id,
+        movie_title: movie.title,
         poster_url: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
       });
     }
